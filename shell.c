@@ -8,50 +8,42 @@
 #define MAXARGS 10
 
 
+int wstatus; //allocating an int neccesary for wait()
+pid_t waitReturnVal; //For storing the return of wait()
+char readBuff[1000]; //Storing the output of "which"-system call
+
+
 int main(int argc, char* const argv[]){
-  char readBuff[10024];
   printf("\n\n\nWelcome to my very limited shell!\n\n\n");
-  int proceed = 2;
-  int parentPid = getpid();
-  int wstatus;
-  pid_t waitreturn;
 
-  int pipefd[2];
+  int parentPid = getpid(); //Process id of parent
+  int proceed = 1; //for later implementing user option to quit out of shell
+  int pipeFileDescriptors[2]; // file descriptors for redirecting output of "which"
 
-  char * argArray[MAXARGS];
-  argArray[0] = argv[0];
-  // argArray[1] = "ls";
-  argArray[2] = NULL;
-  // argArray[3] = argv[3];
-  // argArray[4] = argv[4];
-  // argArray[5] = argv[5];
-  // argArray[6] = argv[6];
-  // argArray[7] = argv[7];
+  char * argArray[MAXARGS]; //arguments into execv()
+  argArray[0] = argv[0]; // by convention, needs to hold filename of running program, i.e "shell.c"
 
 
+  while(proceed){
 
-
-
-  // char * const *argArray;
-
-  while(proceed==2 || proceed==3){
-
-
-    if(pipe(pipefd)==-1){
+    //create pipe for redirecting output
+    if(pipe(pipeFileDescriptors)==-1){
       perror("pipe");
     }
 
 
     printf("\n\n\nPrompt>> ");
     char command[MAXARGS];
-    // fgets(command, sizeof(command), stdin);
     scanf("%s", command);
+    //filling up argumnents into upcoming execv()
     argArray[1] = command;
+    argArray[2] = NULL;
 
     // printf("\n\n\n");
     // if( (int) *command== 9){break;}
-    pid_t child = fork();
+    pid_t child = fork(); //execv will be executed by children
     int newPid;
+
 
     // printf("\n\n\nargv[1]:   %s", argv[1]);
     // printf("\n\n\nargArray[0]:   %s", argArray[0]);
@@ -68,13 +60,14 @@ int main(int argc, char* const argv[]){
     // printf("\n\n\nargArray[7]:   %s", argArray[7]);
 
 
+    //ensuring that parent doesnt enter this section
     if( (newPid = getpid()) != parentPid){
       proceed=0;
       // printf("\n\n\nPid inside: %d\n\n\n\n\n\n\n\n\n", newPid);
-      // execv("/usr/bin/ls", argv);
-      close(pipefd[0]);
-      dup2(pipefd[1], STDOUT_FILENO);
-      close(pipefd[1]);
+      //redirecting output of which
+      close(pipeFileDescriptors[0]);
+      dup2(pipeFileDescriptors[1], STDOUT_FILENO);
+      close(pipeFileDescriptors[1]);
       // printf("\n\n\nargArray before:");
       // printf("\n\n\nargArray[0]:   %s", argArray[0]);
       // printf("\n\n\nargArray[1]:   %s", argArray[1]);
@@ -83,11 +76,12 @@ int main(int argc, char* const argv[]){
 
     }else{
       waitreturn =  wait(&wstatus);
-      close(pipefd[1]);
+      close(pipeFileDescriptors[1]);
       int child2 = fork();
       if(getpid()!=parentPid){
-        int wordLen = read(pipefd[0], readBuff, sizeof(readBuff));
-        close(pipefd[0]);
+        //read output of which
+        int wordLen = read(pipeFileDescriptors[0], readBuff, sizeof(readBuff));
+        close(pipeFileDescriptors[0]);
         readBuff[wordLen-1] = '\0';
         printf("\n\n\n");
         // for(int k = 0; k<=wordLen; k++){
@@ -117,24 +111,23 @@ int main(int argc, char* const argv[]){
         // printf("\n\n\nargArray[2]:   %s", argArray[2]);
         // execv("/usr/bin/man", argArray);
 
-        char *ce = "/usr/bin/man";
-        argArray[1] = NULL;
+        argArray[1] = NULL; //set to NULL by convection, see man-page of execv()
         printf("\n\n\n");
-        if(execv(readBuff, argArray)==-1){
+        if(execv(readBuff, argArray)==-1){ // execute the program chosen by the user
           perror("execv");
         };
       }
+
+      // wait for prior command to finish before prompting new command
       waitreturn =  wait(&wstatus);
 
-
-
     }
+    // wait for prior command to finish before prompting new command
     waitreturn =  wait(&wstatus);
     // int pid = getpid();
     // printf("\n\n\nLatest Pid: %d", pid);
     // printf("\n\n\nParent Pid: %d", parentPid);
     // proceed++;
-
   }
 
 }

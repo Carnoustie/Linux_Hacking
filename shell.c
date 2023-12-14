@@ -13,6 +13,41 @@ pid_t waitReturnVal; //For storing the return of wait()
 char readBuff[1000]; //Storing the output of "which"-system call
 
 
+
+
+char **processArray(char *userArgs, int len){
+  // printf("\n\n\nnew array %d: \n\n\n", len);
+
+  char **returnArray;
+  char currentChar='a';
+  int currentIndex=0;
+  int k = 0;
+  int arrayElem = 0;
+  while(currentChar!='\0'){
+    // printf("hit");
+    currentChar = userArgs[currentIndex];
+    currentIndex++;
+    printf("%c", currentChar);
+
+    if(currentChar==' '){
+      printf("hit");
+
+      printf("\n\n\nnew array: \n\n\n");
+      for(int q=0; q<arrayElem; q++){
+        printf(" %c", returnArray[k][q]);
+      }
+      arrayElem = 0;
+      k++;
+    }else{
+      returnArray[k][arrayElem];
+      arrayElem++;
+    }
+  }
+
+  return returnArray;
+}
+
+
 int main(int argc, char* const argv[]){
   printf("\n\n\nWelcome to my very limited shell!\n\n\n");
 
@@ -34,7 +69,22 @@ int main(int argc, char* const argv[]){
 
     printf("\n\n\nPrompt>> ");
     char command[MAXARGS];
-    scanf("%s", command);
+    int inputLen = scanf("%s", command);
+    // printf("\n\n\n>> ");
+
+    // char c;
+    // int u=0;
+    // while((c=command[u])!='\0'){
+    //   printf(" %c", c);
+    //   u++;
+    // }
+    //
+    // for(int i=0; i<5; i++){
+    //   printf(" %c", command[i]);
+    // }
+
+    // char **retval = processArray(command, inputLen);
+
     //filling up argumnents into upcoming execv()
     argArray[1] = command;
     argArray[2] = NULL;
@@ -75,7 +125,7 @@ int main(int argc, char* const argv[]){
       execv("/usr/bin/which", argArray);
 
     }else{
-      waitreturn =  wait(&wstatus);
+      waitReturnVal =  wait(&wstatus);
       close(pipeFileDescriptors[1]);
       int child2 = fork();
       if(getpid()!=parentPid){
@@ -83,7 +133,7 @@ int main(int argc, char* const argv[]){
         int wordLen = read(pipeFileDescriptors[0], readBuff, sizeof(readBuff));
         close(pipeFileDescriptors[0]);
         readBuff[wordLen-1] = '\0';
-        printf("\n\n\n");
+        // printf("\n\n\n");
         // for(int k = 0; k<=wordLen; k++){
         //   printf(" , %c", readBuff[k]);
         // }
@@ -94,7 +144,7 @@ int main(int argc, char* const argv[]){
         // for(int k = 0; k<=wordLen; k++){
         //   printf(" , %c", cek[k]);
         // }
-        printf("\n\n\n");
+        // printf("\n\n\n");
 
 
         // printf("read the following:   %s", readBuff);
@@ -106,24 +156,35 @@ int main(int argc, char* const argv[]){
 
         // argArray[0]= readBuff;
         // printf("\n\n\nargArray after:");
+        argArray[3] = argArray[2];
+        argArray[2] = "ls";
+
         // printf("\n\n\nargArray[0]:   %s", argArray[0]);
         // printf("\n\n\nargArray[1]:   %s", argArray[1]);
         // printf("\n\n\nargArray[2]:   %s", argArray[2]);
+        // printf("\n\n\nargArray[3]:   %s", argArray[3]);
+        //
+        // printf("\n\n\n\n\n\ninput arg array: ");
+        // printf("\n\n\nargArray[0]:   %s", argv[0]);
+        // printf("\n\n\nargArray[1]:   %s", argv[1]);
+        // printf("\n\n\nargArray[2]:   %s", argv[2]);
+        // printf("\n\n\nargArray[3]:   %s", argv[3]);
+
         // execv("/usr/bin/man", argArray);
 
         argArray[1] = NULL; //set to NULL by convection, see man-page of execv()
-        printf("\n\n\n");
+        // printf("\n\n\n");
         if(execv(readBuff, argArray)==-1){ // execute the program chosen by the user
           perror("execv");
         };
       }
 
       // wait for prior command to finish before prompting new command
-      waitreturn =  wait(&wstatus);
+      waitReturnVal =  wait(&wstatus);
 
     }
     // wait for prior command to finish before prompting new command
-    waitreturn =  wait(&wstatus);
+    waitReturnVal =  wait(&wstatus);
     // int pid = getpid();
     // printf("\n\n\nLatest Pid: %d", pid);
     // printf("\n\n\nParent Pid: %d", parentPid);

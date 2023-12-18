@@ -3,9 +3,10 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/types.h>
+#include <string.h>
 
 #define UPPERBOUND 1000
-#define MAXARGS 10
+#define MAXARGS 100
 
 
 int wstatus; //allocating an int neccesary for wait()
@@ -13,9 +14,28 @@ pid_t waitReturnVal; //For storing the return of wait()
 char readBuff[1000]; //Storing the output of "which"-system call
 
 
+char **tokenize(char *input){
+  char * delim = " ";
+  char** tokens;
+  char *nextToken = strtok(command,delim);;
+  tokens[0] = nextToken;
 
+  int h=1;
+  while( (tokens[h]=strtok(NULL,delim))!=NULL ){
+    h++;
+  }
 
-char **processArray(char *userArgs, int len){
+  //
+  // tokens[1] = strtok(NULL,delim);
+  // tokens[2] = strtok(NULL,delim);
+  // tokens[3] = strtok(NULL,delim);
+
+  for(int i=0; i<h; i++){
+      printf("\n\n\ntoken %d: %s", i,  tokens[i]);
+  }
+}
+
+char **processArray(char *userArgs){
   // printf("\n\n\nnew array %d: \n\n\n", len);
 
   char **returnArray;
@@ -23,6 +43,8 @@ char **processArray(char *userArgs, int len){
   int currentIndex=0;
   int k = 0;
   int arrayElem = 0;
+
+  // printf("hej");
   while(currentChar!='\0'){
     // printf("hit");
     currentChar = userArgs[currentIndex];
@@ -67,23 +89,45 @@ int main(int argc, char* const argv[]){
     }
 
 
-    printf("\n\n\nPrompt>> ");
-    char command[MAXARGS];
-    int inputLen = scanf("%s", command);
-    // printf("\n\n\n>> ");
 
-    // char c;
-    // int u=0;
-    // while((c=command[u])!='\0'){
-    //   printf(" %c", c);
-    //   u++;
+
+
+    printf("\n\n\nPrompt>> ");
+    char buffer[1000];
+
+    char *command = fgets(buffer, sizeof(buffer), stdin);
+
+    printf("\n\n\nRead the following:   %s", command);
+    printf("\n\n\nTime to tokenize!");
+
+
+    // printf("\n\n\n\n\n\n");
+    // int i=0;
+    // char nextChar=command[i];
+    //
+    // while(nextChar!='\0'){
+    //   nextChar=command[i];
+    //   printf(" k");
+    //   i++;
+    // }
+    // printf("\n\n\n\n\n\n");
+    //
+    //
+    // char **retval = processArray(command);
+
+    // printf("\n\n\na1:\n");
+    // printf(" %", retval[0]);
+
+    // for(int j=0; j<3;j++){
+    //   printf(" %c", retval[0][j]);
     // }
     //
-    // for(int i=0; i<5; i++){
-    //   printf(" %c", command[i]);
+    // printf("\n\n\na2:\n");
+    //
+    // for(int j=0; j<2;j++){
+    //   printf(" %c", retval[1][j]);
     // }
 
-    // char **retval = processArray(command, inputLen);
 
     //filling up argumnents into upcoming execv()
     argArray[1] = command;
@@ -124,8 +168,11 @@ int main(int argc, char* const argv[]){
       // printf("\n\n\nargArray[2]:   %s", argArray[2]);
       execv("/usr/bin/which", argArray);
 
+
+
     }else{
       waitReturnVal =  wait(&wstatus);
+
       close(pipeFileDescriptors[1]);
       int child2 = fork();
       if(getpid()!=parentPid){
@@ -156,8 +203,8 @@ int main(int argc, char* const argv[]){
 
         // argArray[0]= readBuff;
         // printf("\n\n\nargArray after:");
-        argArray[3] = argArray[2];
-        argArray[2] = "ls";
+        // argArray[3] = argArray[2];
+        // argArray[2] = "ls";
 
         // printf("\n\n\nargArray[0]:   %s", argArray[0]);
         // printf("\n\n\nargArray[1]:   %s", argArray[1]);

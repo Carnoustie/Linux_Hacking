@@ -13,6 +13,10 @@ int wstatus; //allocating an int neccesary for wait()
 pid_t waitReturnVal; //For storing the return of wait()
 char readBuff[1000]; //Storing the output of "which"-system call
 char * argArray[MAXARGS]; //arguments into execv()
+int pipeFileDescriptors[2];
+int wstatus1;
+int wstatus2;
+int wstatus3;
 
 
 void cleanString(char* input){
@@ -61,13 +65,9 @@ void printArray(char* arrayname, char** arrayToPrint, int arrayLength){
 
 int main(int argc, char* const argv[]){
 
-
-
-
   printf("\n\n\nWelcome to my very limited shell!\n\n\n");
 
   int parentPid = getpid(); //Process id of parent
-
 
   while(1){
     int pipeFileDescriptors[2]; // file descriptors for redirecting output of "which"
@@ -87,10 +87,9 @@ int main(int argc, char* const argv[]){
     char* tokens[MAXARGS];
     tokens[0] = argv[0];
     int numTokens = tokenize(tokens, command);
-    printArray("tokens", tokens, numTokens);
+    // printArray("tokens", tokens, numTokens);
     // inspectString(tokens[1]);
     // cleanString(tokens[1]);
-
 
 
     // printf("\n\n\nTime to tokenize!");
@@ -99,32 +98,41 @@ int main(int argc, char* const argv[]){
         cleanString(tokens[i]);
     }
 
+    char* firstArgs[2];
+    firstArgs[0] = argv[0];
+    firstArgs[1] = tokens[1];
+    firstArgs[2] =  NULL;
+
+    if(pipe(pipeFileDescriptors)==-1){
+      perror("pipe");
+    }
+
+    int fork1 =  fork();
+
+    if(fork1==0){
+      close(pipeFileDescriptors[0]);
+      dup2(pipeFileDescriptors[1], STDOUT_FILENO);
+      close(pipeFileDescriptors[1]);
+      execv("/usr/bin/which", firstArgs);
+    }else{
+      int waitReturnVal = wait(&wstatus1);
+      close(pipeFileDescriptors[1]);
+      char buff[1000];
+      int wordLen = read(pipeFileDescriptors[0], buff, sizeof(buff));
+      buff[wordLen-1] = '\0';
+      close(pipeFileDescriptors[0]);
+      char* args2[numTokens+1];
+      args2[0] = argv[0];
+      for(int j=2; j<=numTokens;j++){
+        args2[j-1] = tokens[j];
+      }
+      // printArray("args2", args2, numTokens);
+      if(execv(buff,args2)==-1){
+        perror("execv");
+      }
+    }
 
 
-
-
-    //Uncomment...
-    printf("\n\n\n\n\n\nchecking character by character.\n\n\n");
-    //
-    // for(int i=0; i<4; i++){
-    //   printf("\nchar in argv: %c", argv[1][i]);
-    //   printf("\nchar in tokens: %c", tokens[1][i]);
-    // }
-
-    // char* test[2];
-    // test[0] = argv[0];
-    // test[1] = "man\0";
-    // test[2] = NULL;
-    //
-    // cleanString(tokens[1]);
-    // int w = strcmp(tokens[1], argv[1]);
-    // printf("\n\n\ncompare: %d", w);
-    // tokens[1] = argv[1];
-    // tokens[0] = argv[0];
-
-
-
-    execv("/usr/bin/which", tokens);
     //Uncomment...
 
     // pid_t forkResult = fork(); //execv will be executed by children

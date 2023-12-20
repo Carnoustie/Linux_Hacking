@@ -15,22 +15,45 @@ char readBuff[1000]; //Storing the output of "which"-system call
 char * argArray[MAXARGS]; //arguments into execv()
 
 
+void cleanString(char* input){
+  int j=0;
+  while(j<100){
+    if(((int) input[j])==10){
+      input[j] = 0;
+      return;
+    }
+    j++;
+  }
+  return;
+}
+
+void inspectString(char* s){
+  char nextChar;
+  int charToInt;
+  int i=0;
+  while(nextChar=s[i]!='\0'){
+    printf(" %d", (int) nextChar);
+  }
+}
+
+
 int tokenize(char** tokens, char *input){
   char delim[] = " ";
-  char *nextToken = strtok(input,delim);;
-  tokens[0] = nextToken;
+  char *nextToken = strtok(input,delim);
+  tokens[1] = nextToken;
 
-  int h=1;
+  int h=2;
   while( (tokens[h]=strtok(NULL,delim))!=NULL ){
+    cleanString(tokens[h]);
     h++;
   }
   return h;
 }
 
 
-void printArray(char* arrayname, char* arrayToPrint, int arrayLength){
+void printArray(char* arrayname, char** arrayToPrint, int arrayLength){
   for(int i=0; i<arrayLength; i++){
-    printf("\n%s[%d] = %d", arrayname, i, arrayToPrint[i]);
+    printf("\n%s[%d] = %s", arrayname, i, arrayToPrint[i]);
   }
 }
 
@@ -62,96 +85,77 @@ int main(int argc, char* const argv[]){
 
     // printf("\n\n\nRead the following:   %s", command);
     char* tokens[MAXARGS];
+    tokens[0] = argv[0];
     int numTokens = tokenize(tokens, command);
+    printArray("tokens", tokens, numTokens);
+    // inspectString(tokens[1]);
+    // cleanString(tokens[1]);
+
+
+
     // printf("\n\n\nTime to tokenize!");
+    // printf("\n\n\nnumTokens: %d", numTokens);
     for(int i=0; i<numTokens; i++){
-        printf("\n\n\ntoken %d: %s", i,  tokens[i]);
+        cleanString(tokens[i]);
     }
 
-    pid_t forkResult = fork(); //execv will be executed by children
+
+
+
+
+    //Uncomment...
+    printf("\n\n\n\n\n\nchecking character by character.\n\n\n");
+    //
+    // for(int i=0; i<4; i++){
+    //   printf("\nchar in argv: %c", argv[1][i]);
+    //   printf("\nchar in tokens: %c", tokens[1][i]);
+    // }
+
+    // char* test[2];
+    // test[0] = argv[0];
+    // test[1] = "man\0";
+    // test[2] = NULL;
+    //
+    // cleanString(tokens[1]);
+    // int w = strcmp(tokens[1], argv[1]);
+    // printf("\n\n\ncompare: %d", w);
+    // tokens[1] = argv[1];
+    // tokens[0] = argv[0];
+
+
+
+    execv("/usr/bin/which", tokens);
+    //Uncomment...
+
+    // pid_t forkResult = fork(); //execv will be executed by children
 
   }
 
   //ensuring that parent doesnt enter this section
-  if(forkResult==0){
-    //redirecting output of "which"
-    close(pipeFileDescriptors[0]);
-    dup2(pipeFileDescriptors[1], STDOUT_FILENO);
-    close(pipeFileDescriptors[1]);
-    // printf("\n\n\nargArray[0]:   %s", argArray[0]);
-    // printf("\n\n\nargArray[1]:   %s", argArray[1]);
-    // printf("\n\n\nargArray[2]:   %s", argArray[2]);
-    execv("/usr/bin/which", tokens);
-
-  }
-  else{
-
-    waitReturnVal =  wait(&wstatus);
-
-    int forkResult2 = fork();
-    if(forkResult2==0){
-      close(pipeFileDescriptors[1]);
-      int wordLen = read(pipeFileDescriptors[0], readBuff, sizeof(readBuff));
-      close(pipeFileDescriptors[0]);
-      readBuff[wordLen-1] = '\0';
-      printf("read: %s", readBuff);
-    }
-    //read output of which
-
-    // printf("\n\n\n");
-    // for(int k = 0; k<=wordLen; k++){
-    //   printf(" , %c", readBuff[k]);
-    // }
-    // printf("\n\n\n");
-    //
-    // char *cek = "/usr/bin/man";
-    // printf("\n\n\n");
-    // for(int k = 0; k<=wordLen; k++){
-    //   printf(" , %c", cek[k]);
-    // }
-    // printf("\n\n\n");
-
-
-    // printf("read the following:   %s", readBuff);
-    // argArray[0] = readBuff;
-    // argArray[1] = NULL;
-    //
-    // printf("argArray[0] after:   %s", argArray[0]);
-    // printf("      argArray[1] after:   %s", argArray[1]);
-
-    // argArray[0]= readBuff;
-    // printf("\n\n\nargArray after:");
-    // argArray[3] = argArray[2];
-    // argArray[2] = "ls";
-
-    // printf("\n\n\nargArray[0]:   %s", argArray[0]);
-    // printf("\n\n\nargArray[1]:   %s", argArray[1]);
-    // printf("\n\n\nargArray[2]:   %s", argArray[2]);
-    // printf("\n\n\nargArray[3]:   %s", argArray[3]);
-    //
-    // printf("\n\n\n\n\n\ninput arg array: ");
-    // printf("\n\n\nargArray[0]:   %s", argv[0]);
-    // printf("\n\n\nargArray[1]:   %s", argv[1]);
-    // printf("\n\n\nargArray[2]:   %s", argv[2]);
-    // printf("\n\n\nargArray[3]:   %s", argv[3]);
-
-    // execv("/usr/bin/man", argArray);
-
-    // argArray[1] = NULL; //set to NULL by convection, see man-page of execv()
-    // printf("\n\n\n");
-    // char* r[2];
-
-    if(execv(readBuff, tokens)==-1){ // execute the program chosen by the user
-      // perror("execv");
-    };
-
-    // wait for prior command to finish before prompting new command
-    waitReturnVal =  wait(&wstatus);
-
-  }
-  // wait for prior command to finish before prompting new command
-  waitReturnVal =  wait(&wstatus);
-  // int pid = getpid();
+  // if(forkResult==0){
+  //   //redirecting output of "which"
+  //   close(pipeFileDescriptors[0]);
+  //   dup2(pipeFileDescriptors[1], STDOUT_FILENO);
+  //   close(pipeFileDescriptors[1]);
+  //   // printf("\n\n\nargArray[0]:   %s", argArray[0]);
+  //   // printf("\n\n\nargArray[1]:   %s", argArray[1]);
+  //   // printf("\n\n\nargArray[2]:   %s", argArray[2]);
+  //   execv("/usr/bin/which", tokens);
+  //
+  // }
+  //
+  //
+  //   if(execv(readBuff, tokens)==-1){ // execute the program chosen by the user
+  //     // perror("execv");
+  //   };
+  //
+  //   // wait for prior command to finish before prompting new command
+  //   waitReturnVal =  wait(&wstatus);
+  //
+  // }
+  // // wait for prior command to finish before prompting new command
+  // waitReturnVal =  wait(&wstatus);
+  // // int pid = getpid();
   // printf("\n\n\nLatest Pid: %d", pid);
   // printf("\n\n\nParent Pid: %d", parentPid);
   // proceed++;

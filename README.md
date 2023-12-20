@@ -1,5 +1,6 @@
 
 ***Instructions for Shell***
+
 Example usage of shell.c Assuming program is run on a Unix system with the gnu c compiler available:
 
 step1: gcc -o s shell.c

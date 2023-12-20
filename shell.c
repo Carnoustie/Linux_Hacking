@@ -66,6 +66,8 @@ void printArray(char* arrayname, char** arrayToPrint, int arrayLength){
 int main(int argc, char* const argv[]){
 
   printf("\n\n\nWelcome to my very limited shell!\n\n\n");
+  printf("\n\n\nTo exit, press ctrl-c\n\n\n");
+
 
   int parentPid = getpid(); //Process id of parent
 
@@ -115,21 +117,26 @@ int main(int argc, char* const argv[]){
       close(pipeFileDescriptors[1]);
       execv("/usr/bin/which", firstArgs);
     }else{
-      int waitReturnVal = wait(&wstatus1);
-      close(pipeFileDescriptors[1]);
-      char buff[1000];
-      int wordLen = read(pipeFileDescriptors[0], buff, sizeof(buff));
-      buff[wordLen-1] = '\0';
-      close(pipeFileDescriptors[0]);
-      char* args2[numTokens+1];
-      args2[0] = argv[0];
-      for(int j=2; j<=numTokens;j++){
-        args2[j-1] = tokens[j];
+      waitReturnVal = wait(&wstatus1);
+      int fork2 = fork();
+      if(fork2==0){
+        close(pipeFileDescriptors[1]);
+        char buff[1000];
+        int wordLen = read(pipeFileDescriptors[0], buff, sizeof(buff));
+        buff[wordLen-1] = '\0';
+        close(pipeFileDescriptors[0]);
+        char* args2[numTokens+1];
+        args2[0] = argv[0];
+        for(int j=2; j<=numTokens;j++){
+          args2[j-1] = tokens[j];
+        }
+        // printArray("args2", args2, numTokens);
+        if(execv(buff,args2)==-1){
+          perror("execv");
+        }
       }
-      // printArray("args2", args2, numTokens);
-      if(execv(buff,args2)==-1){
-        perror("execv");
-      }
+      int waitReturnVal = wait(&wstatus2);
+
     }
 
 

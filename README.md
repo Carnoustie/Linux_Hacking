@@ -4,11 +4,17 @@
 Example usage of shell.c Assuming program is run on a Unix system with the gnu c compiler available:
 
 step1: gcc -o s shell.c
+
 step2: ./s
+
 step3: now you will be presented with a welcome message and "prompt>>" on the terminal
+
 example execution: 
+
 Prompt>> grep fork() shell.c
+
 with output:
+
     int fork1 =  fork();
       int fork2 = fork();
 

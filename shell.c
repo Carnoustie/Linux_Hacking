@@ -13,12 +13,14 @@ int wstatus; //allocating an int neccesary for wait()
 pid_t waitReturnVal; //For storing the return of wait()
 char readBuff[1000]; //Storing the output of "which"-system call
 char * argArray[MAXARGS]; //arguments into execv()
-int pipeFileDescriptors[2];
-int wstatus1;
-int wstatus2;
-int wstatus3;
+int pipeFileDescriptors[2]; //for pipe
+int wstatus1; // waiting for children
+int wstatus2;  // waiting for children
 
 
+// String processing to comply with execv()
+//Arg1: string to clean, most likely argument into program that the user wants to execute
+// Return: String in a format that execv() expects
 void cleanString(char* input){
   int j=0;
   while(j<100){
@@ -31,6 +33,9 @@ void cleanString(char* input){
   return;
 }
 
+//Inspect String
+// Arg1: String that user wants to inspect and see true ascii values one-by-one
+// return: void
 void inspectString(char* s){
   char nextChar;
   int charToInt;
@@ -41,6 +46,10 @@ void inspectString(char* s){
 }
 
 
+//Tokenize
+//Arg1: Array of pointers into which the tokens are stored
+// Arg2: String provided by the user
+// Return: The number of arguments provided by the user, int.
 int tokenize(char** tokens, char *input){
   char delim[] = " ";
   char *nextToken = strtok(input,delim);
@@ -54,7 +63,10 @@ int tokenize(char** tokens, char *input){
   return h;
 }
 
-
+//Print content of string array
+// Arg1: Name of array, string
+//Arg2: Actual array of strings
+// Arg3: Length of provided array
 void printArray(char* arrayname, char** arrayToPrint, int arrayLength){
   for(int i=0; i<arrayLength; i++){
     printf("\n%s[%d] = %s", arrayname, i, arrayToPrint[i]);
@@ -74,52 +86,47 @@ int main(int argc, char* const argv[]){
   while(1){
     int pipeFileDescriptors[2]; // file descriptors for redirecting output of "which"
 
-    //create pipe for redirecting output
-    if(pipe(pipeFileDescriptors)==-1){
-      perror("pipe");
-    }
-
-
     printf("\n\n\nPrompt>> ");
-    char buffer[1000];
+
+    char buffer[1000]; // For storing user input
 
     char *command = fgets(buffer, sizeof(buffer), stdin);
 
-    // printf("\n\n\nRead the following:   %s", command);
-    char* tokens[MAXARGS];
-    tokens[0] = argv[0];
+    char* tokens[MAXARGS]; //Pass into tokenize
+    tokens[0] = argv[0]; //To comply with execv()
     int numTokens = tokenize(tokens, command);
-    // printArray("tokens", tokens, numTokens);
-    // inspectString(tokens[1]);
-    // cleanString(tokens[1]);
 
-
-    // printf("\n\n\nTime to tokenize!");
-    // printf("\n\n\nnumTokens: %d", numTokens);
+    //Make all tokens compatible with execv()
     for(int i=0; i<numTokens; i++){
         cleanString(tokens[i]);
     }
 
+    //Arg into "which" syscall
     char* firstArgs[2];
     firstArgs[0] = argv[0];
     firstArgs[1] = tokens[1];
     firstArgs[2] =  NULL;
 
+    //create pipe for redirecting output
     if(pipe(pipeFileDescriptors)==-1){
       perror("pipe");
     }
 
+    // First child
     int fork1 =  fork();
 
+
     if(fork1==0){
+      //Pass output of which to second child that then executes program
       close(pipeFileDescriptors[0]);
       dup2(pipeFileDescriptors[1], STDOUT_FILENO);
       close(pipeFileDescriptors[1]);
       execv("/usr/bin/which", firstArgs);
     }else{
-      waitReturnVal = wait(&wstatus1);
+      waitReturnVal = wait(&wstatus1); // Wait until which returns
       int fork2 = fork();
       if(fork2==0){
+        //Execute actual program with user arguments
         close(pipeFileDescriptors[1]);
         char buff[1000];
         int wordLen = read(pipeFileDescriptors[0], buff, sizeof(buff));
@@ -136,43 +143,7 @@ int main(int argc, char* const argv[]){
         }
       }
       int waitReturnVal = wait(&wstatus2);
-
     }
-
-
-    //Uncomment...
-
-    // pid_t forkResult = fork(); //execv will be executed by children
-
+    //Continue to loop
   }
-
-  //ensuring that parent doesnt enter this section
-  // if(forkResult==0){
-  //   //redirecting output of "which"
-  //   close(pipeFileDescriptors[0]);
-  //   dup2(pipeFileDescriptors[1], STDOUT_FILENO);
-  //   close(pipeFileDescriptors[1]);
-  //   // printf("\n\n\nargArray[0]:   %s", argArray[0]);
-  //   // printf("\n\n\nargArray[1]:   %s", argArray[1]);
-  //   // printf("\n\n\nargArray[2]:   %s", argArray[2]);
-  //   execv("/usr/bin/which", tokens);
-  //
-  // }
-  //
-  //
-  //   if(execv(readBuff, tokens)==-1){ // execute the program chosen by the user
-  //     // perror("execv");
-  //   };
-  //
-  //   // wait for prior command to finish before prompting new command
-  //   waitReturnVal =  wait(&wstatus);
-  //
-  // }
-  // // wait for prior command to finish before prompting new command
-  // waitReturnVal =  wait(&wstatus);
-  // // int pid = getpid();
-  // printf("\n\n\nLatest Pid: %d", pid);
-  // printf("\n\n\nParent Pid: %d", parentPid);
-  // proceed++;
-
 }
